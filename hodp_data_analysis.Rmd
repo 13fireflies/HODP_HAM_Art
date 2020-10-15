@@ -1,0 +1,111 @@
+---
+title: "HODP_R_Bootcamp"
+author: "Vanessa + Jason"
+date: "10/14/2020"
+output: pdf_document
+---
+
+First checking the dataset as a whole
+```{r}
+df <- read.csv("MuseumDataFull.csv")
+summary(df)
+```
+
+EDA of totaluniquepageviews
+Extremely right skewed
+```{r}
+names(df)[names(df) == "totaluniquepageviews"] <- "views"
+hist(df$views, breaks = 500)
+hist(df$views, breaks = 500, xlim = c(0, 5000))
+hist(df$views, breaks = 5000, xlim = c(0, 500))
+hist(df$views, breaks = 5000, xlim = c(0, 500), ylim = c(0, 100))
+hist(df$views, breaks = 5000, xlim = c(0, 200))
+
+max(df$views) #max = 13079
+df[which.max(df$views),]
+summary(df$views)
+quantile(df$views, c(0:20)/20)
+sum(df$views > 100) #421
+```
+
+EDA of culture
+Some weird stuff, like with "European?"
+multiple categories of Italian, Roman, Spanish, British; there is Flemish and Franco-Flemish and French
+Unidentified culture and unknown are also two categories
+"Graeco-Bactrian"              
+"Graeco-Roman" + "Greek"
+"Hellenistic"                  
+"Hellenistic or Early Roman" 
+
+```{r}
+# broader stroke, 21 categories
+head(df$culture)
+allcnames <- unique(df$culture)
+length(allcnames)
+orderedcnames <- allcnames[order(allcnames)]
+orderedcnames
+# first remove the question marks, kinda pointless here
+df$culture <- gsub("[?]", "", df$culture)
+
+# Make consistent different locations
+df$culture <- gsub("^British.+", "British", df$culture)
+df$culture <- gsub("^Italian.+", "Italian", df$culture)
+df$culture <- gsub("^Roman.+", "Roman", df$culture)
+df$culture <- gsub("^Spanish.+", "Spanish", df$culture)
+
+df$culture[df$culture == "" | df$culture == "Unidentified culture"  | df$culture == "unknown"] <- "Unknown"
+
+length(unique(df$culture))
+
+# boarder stroke, 20 categories
+df$fculture <- df$culture
+culturerank <- names(which(table(df$culture) > 50))
+length(culturerank)
+df$fculture[!df$culture %in% culturerank] <- "Other"
+table(df$fculture)
+df$fculture <- as.factor(df$fculture)
+plot(df$fculture, las = 2)
+
+# smaller stroke, 10 categories
+df$ffculture <- df$culture
+culturerank <- names(which(table(df$culture) > 500))
+length(culturerank)
+df$ffculture[!df$culture %in% culturerank] <- "Other"
+table(df$ffculture)
+df$ffculture <- as.factor(df$ffculture)
+plot(df$ffculture, las = 2)
+```
+
+oh god, the dated stuff will be very annoying to clean
+```{r}
+library(stringr)
+head(df$dated)
+
+# get rid of those unknown stuff
+uuu <- str_detect(df$dated, "^[Uu]")
+allunknown <- c(unique(df$dated[uuu]), "")
+sum(df$dated == "Unknown")
+df$dated[df$dated %in% allunknown] <- "Unknown"
+
+# lowkey lumping all the BCE together, as not too many of them
+bce <- str_detect(df$dated, "BCE")
+sum(df$dated[bce])
+df$dated[bce] <- "BCE"
+
+# then hopefully can lump by century GG
+# first work with the best case scenario LOL
+# thank u random guy: https://gist.github.com/micstr/69a64fbd0f5635094a53
+IsDate <- function(mydate, date.format = "%m/%d/%y") {
+  tryCatch(!is.na(as.Date(mydate, date.format)),  
+           error = function(err) {FALSE})  
+}
+
+nicedates <- IsDate(df$dated)
+sum(nicedates)
+a = c("asd", "acs", "asd")
+substr(a, 1, 2)
+head(df$dated)
+unique(df$dated)
+sum(df$dated == "Unknown")
+```
+
