@@ -102,7 +102,8 @@ IsDate <- function(mydate, date.format = "%m/%d/%y") {
 
 nicedates <- IsDate(df$dated)
 sum(nicedates)
-a = c("asd", "acs", "asd")
+a = c("10/2/2020", 13, "asd")
+a[1] <- as.Date(a[1])
 substr(a, 1, 2)
 head(df$dated)
 unique(df$dated)
