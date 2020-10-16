@@ -7,7 +7,7 @@ output: pdf_document
 
 First checking the dataset as a whole
 ```{r}
-df <- read.csv("MuseumDataFull.csv")
+df <- read.csv("MuseumDataFull1015.csv")
 summary(df)
 ```
 
@@ -43,7 +43,7 @@ head(df$culture)
 allcnames <- unique(df$culture)
 length(allcnames)
 orderedcnames <- allcnames[order(allcnames)]
-orderedcnames
+#orderedcnames
 # first remove the question marks, kinda pointless here
 df$culture <- gsub("[?]", "", df$culture)
 
@@ -76,8 +76,33 @@ df$ffculture <- as.factor(df$ffculture)
 plot(df$ffculture, las = 2)
 ```
 
-oh god, the dated stuff will be very annoying to clean
+EDA: department, division, century, period
 ```{r}
+head(df$department)
+unique(df$department)
+df$department <- as.factor(df$department)
+head(df$division)
+length(unique(df$division))
+unique(df$division)
+df$division[df$division == ""] <- "Other"
+df$division <- as.factor(df$division)
+plot(df$division, las = 2)
+head(df$period)
+length(unique(df$period))
+head(df$century)
+length(unique(df$century))
+unique(df$century)
+head(df$dateend)
+```
+
+EDA: Intersections
+```{r}
+plot(df$views ~df$division, las = 2)
+```
+
+
+oh god, the dated stuff will be very annoying to clean
+```{r, eval = F}
 library(stringr)
 head(df$dated)
 
