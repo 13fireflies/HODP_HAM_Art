@@ -21,11 +21,11 @@ hist(df$views, breaks = 5000, xlim = c(0, 500))
 hist(df$views, breaks = 5000, xlim = c(0, 500), ylim = c(0, 100))
 hist(df$views, breaks = 5000, xlim = c(0, 200))
 
-max(df$views) #max = 13079
+max(df$views) #max = 3234
 df[which.max(df$views),]
 summary(df$views)
 quantile(df$views, c(0:20)/20)
-sum(df$views > 100) #421
+sum(df$views > 100) #400
 ```
 
 EDA of culture
@@ -53,7 +53,7 @@ df$culture <- gsub("^Italian.+", "Italian", df$culture)
 df$culture <- gsub("^Roman.+", "Roman", df$culture)
 df$culture <- gsub("^Spanish.+", "Spanish", df$culture)
 
-df$culture[df$culture == "" | df$culture == "Unidentified culture"  | df$culture == "unknown"] <- "Unknown"
+df$culture[df$culture == "" | df$culture == "Unidentified culture"] <- "Unknown"
 
 length(unique(df$culture))
 
@@ -91,13 +91,71 @@ head(df$period)
 length(unique(df$period))
 head(df$century)
 length(unique(df$century))
-unique(df$century)
+#unique(df$century)
 head(df$dateend)
+hist(df$rank)
+hist(df$accessionyear)
+plot()
+```
+
+EDA: datethings
+
+```{r}
+hist(df$dateend, breaks = 300)
+sum(df$dateend == 0)
+sum(df$datebegin == 0 & df$dateend == 0)
+head(df$century[df$datebegin == 0 & df$dateend == 0])
+#making rank something reasonable
+hist(df$rank, breaks = 300)
+summary(df$rank)
+plot(rank ~ views, data = df)
+df$arank <- df$rank
+df$arank <- df$arank - min(df$arank) + 1
+df$arank <- df$arank / (max(df$arank) + 1)
+df$arank <- log(df$arank / (1 - df$arank))
+
+
+#making logviews something reasonable
+df$logviews <- log(df$views + 1)
+
+df_validdates <- df[df$datebegin != 0 | df$dateend != 0,]
+df_validdates$meddate <- (df_validdates$datebegin + df_validdates$dateend) / 2
+hist(df_validdates$meddate, breaks = 300)
+#df_validdates$meddate
+# lm1 <- lm(views ~ meddate, data = df_validdates)
+# summary(lm1)
+# plot(lm1)
+```
+
+Data Analysis
+```{r}
+df_validdates$logdate <- log(max(df_validdates$meddate) - df_validdates$meddate + 1)
+hist(df_validdates$logdate)
+hist(df_validdates$logviews)
+summary(df_validdates$logviews)
+
+lm2 <- lm(logviews ~ logdate, data = df_validdates)
+summary(lm2)
+plot(logviews ~ logdate, data = df_validdates)
+abline(lm2, col = "Blue")
+plot(lm2, which = c(1, 2)) #assumptions really not met
+
+boxplot(views ~ ffculture, data = df)
+#boxplot(logviews ~ ffculture, data - df)
+```
+
+
+```{r}
+plot(rank ~ logdate, data = df_validdates)
+plot(arank ~ logdate, data = df_validdates)
+lm3 <- lm(arank ~ logdate, data = df_validdates)
+summary(lm3)
+plot(lm3, which = c(1, 2))
 ```
 
 EDA: Intersections
 ```{r}
-plot(df$views ~df$division, las = 2)
+plot(df$views ~ df$division, las = 2)
 ```
 
 
