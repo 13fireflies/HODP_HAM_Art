@@ -95,7 +95,7 @@ length(unique(df$century))
 head(df$dateend)
 hist(df$rank)
 hist(df$accessionyear)
-plot()
+#plot()
 ```
 
 EDA: datethings
