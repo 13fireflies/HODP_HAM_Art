@@ -274,3 +274,94 @@ sum(df$dated == "Unknown")
 #ggplotly(a)
 ```
 
+
+## Accession Year
+
+```{r}
+df  %>% mutate(Culture=fculture) %>% ggplot(aes(x=accessionyear, y = views)) + geom_point(aes(color = Culture)) + ggtitle("Views and Accession Year") + xlab("Accession Year") + ylab("Average Views") + xlim(1890, 2020) + theme_hodp() +
+#+scale_color_manual(name = "Tweet Type")
+  #scale_x_date(date_minor_breaks = "7 days")  +
+  #geom_smooth(aes(color = fculture), se = FALSE) +
+  ggsave("accYear_views.png", width = 7.5, height = 5)
+```
+
+
+## Cool stuff
+
+### Filtered to top 20 cultures
+
+```{r}
+culturerank <- names(which(table(df$culture) > 50))
+print(culturerank)
+df20 = df %>% filter(fculture %in% culturerank) %>% filter(!(as.character(fculture) %in% c("Unknown")))
+df20 %>% select(culture, title)
+```
+
+
+### Prep data for visual, summary statistics
+
+```{r}
+dfCircle = df20 %>% group_by(culture) %>% summarize(n(), mean(views), median(views), sd(views), mean(rank), median(rank), sd(rank))
+names(dfCircle)[names(dfCircle) == "n()"] <- "count"
+names(dfCircle)[names(dfCircle) == "mean(views)"] <- "meanViews"
+names(dfCircle)[names(dfCircle) == "median(views)"] <- "medViews"
+names(dfCircle)[names(dfCircle) == "sd(views)"] <- "sdViews"
+names(dfCircle)[names(dfCircle) == "mean(rank)"] <- "meanRank"
+names(dfCircle)[names(dfCircle) == "median(rank)"] <- "medRank"
+names(dfCircle)[names(dfCircle) == "sd(rank)"] <- "sdRank"
+print(dfCircle)
+```
+
+
+### Circle vis
+
+```{r}
+
+library(packcircles)
+
+circleData <- data.frame(culture=dfCircle$culture, avgViews=dfCircle$meanViews) 
+ 
+# Generate the layout. sizetype can be area or radius, following your preference on what to be proportional to value.
+packing <- circleProgressiveLayout(circleData$avgViews, sizetype='area')
+circleData <- cbind(circleData, packing)
+dat.gg <- circleLayoutVertices(packing, npoints=50)
+# dat.gg <- cbind(dat.gg, as.data.frame(circleData$avgViews))
+# names(word_list)[4] = 'avgViews'
+print(dat.gg)
+circles = ggplot() + 
+  
+  # Make the bubbles
+  geom_polygon(data = dat.gg, aes(x, y, group = id, fill="#E9141D"), colour = "black") +
+  
+  # Add text in the center of each bubble + control its size
+  geom_text(data = circleData, aes(x, y, size=avgViews, label = paste(culture, round(avgViews, digits=2), sep="\nAvg Views: "))) +
+  scale_size_continuous(range = c(1,4)) +
+    scale_alpha_continuous(range = c(0.35, 0.9)) +
+   labs(caption = "Source: https://harvardartmuseums.org/collections/api") + 
+  ggtitle("Mean Views of HAM Works, by Culture") + 
+  
+  # General theme:
+
+  theme(axis.ticks=element_blank()) +
+  theme_hodp() +
+  theme_void() +
+  theme(legend.position="none") +
+  ggsave("culture_views_cloud.png")
+  #coord_equal()
+
+grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(2, 'cm'))
+
+
+ggplotly(circles,tooltip = c("avgViews")) %>% layout(title = list(text = paste0('Mean Views of HAM Works, by Culture',
+                                    '<br>',
+                                    '<sup>',
+                                    'Source: https://harvardartmuseums.org/collections/api',
+                                    '</sup>')))
+  #ggsave("keyword_cloud.png", width = 9, height = 5)
+```
+
+```{r}
+# cleaned data
+write.csv(df, 'cleanedData.csv')
+```
+
