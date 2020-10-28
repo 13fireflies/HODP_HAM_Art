@@ -71,20 +71,20 @@ df %>% select(culture)
 
 #### Dataframes for top 20 or 10 cultures
 
-issue??? want to save into sep dataframe
+
 ```{r}
 # broader stroke, 20 categories
-df20 = df
-#print(df20)
+df$fculture <- df$culture
 culturerank <- names(which(table(df$culture) > 50))
-#length(culturerank)
-print(culturerank)
-df20$culture[!df20$culture %in% culturerank] <- "Other"
-df20$culture <- as.factor(df20$culture)
-df20 %>% select(title,culture)
-#plot(df20$culture, las = 2)
-#print(levels(df20$culture))
-#head(df20)
+length(culturerank)
+df$fculture[!df$culture %in% culturerank] <- "Other"
+table(df$fculture)
+df$fculture <- as.factor(df$fculture)
+plot(df$fculture, las = 2)
+head(df)
+#df %>% select(title,fculture)
+
+
 # length(df)
 ```
 
