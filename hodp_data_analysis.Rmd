@@ -5,13 +5,19 @@ date: "10/14/2020"
 output: pdf_document
 ---
 
-First checking the dataset as a whole
 ```{r}
-df <- read.csv("MuseumDataFull1015.csv")
+source('styleguide.R')
+```
+
+
+# Check Dataset as a Whole
+```{r}
+df <- read.csv("./MuseumDataFull1015.csv")
 summary(df)
 ```
 
-EDA of totaluniquepageviews
+## EDA of totaluniquepageviews
+
 Extremely right skewed
 ```{r}
 names(df)[names(df) == "totaluniquepageviews"] <- "views"
@@ -28,7 +34,7 @@ quantile(df$views, c(0:20)/20)
 sum(df$views > 100) #400
 ```
 
-EDA of culture
+## EDA of Culture
 Some weird stuff, like with "European?"
 multiple categories of Italian, Roman, Spanish, British; there is Flemish and Franco-Flemish and French
 Unidentified culture and unknown are also two categories
@@ -37,6 +43,7 @@ Unidentified culture and unknown are also two categories
 "Hellenistic"                  
 "Hellenistic or Early Roman" 
 
+### Add general culture labels
 ```{r}
 # broader stroke, 21 categories
 head(df$culture)
@@ -47,25 +54,42 @@ orderedcnames <- allcnames[order(allcnames)]
 # first remove the question marks, kinda pointless here
 df$culture <- gsub("[?]", "", df$culture)
 
-# Make consistent different locations
+# Make consistent different locations using regex
 df$culture <- gsub("^British.+", "British", df$culture)
 df$culture <- gsub("^Italian.+", "Italian", df$culture)
 df$culture <- gsub("^Roman.+", "Roman", df$culture)
 df$culture <- gsub("^Spanish.+", "Spanish", df$culture)
+df$culture <- gsub("^German\\?", "German", df$culture)
+df$culture <- gsub("^European.+", "European", df$culture)
+df$culture <- gsub("^$", "Unknown", df$culture)
 
-df$culture[df$culture == "" | df$culture == "Unidentified culture"] <- "Unknown"
+df$culture[df$culture == "^$" | df$culture == "Unidentified culture"] <- "Unknown"
 
 length(unique(df$culture))
+df %>% select(culture)
+```
 
-# boarder stroke, 20 categories
-df$fculture <- df$culture
+#### Dataframes for top 20 or 10 cultures
+
+issue??? want to save into sep dataframe
+```{r}
+# broader stroke, 20 categories
+df20 = df
+#print(df20)
 culturerank <- names(which(table(df$culture) > 50))
-length(culturerank)
-df$fculture[!df$culture %in% culturerank] <- "Other"
-table(df$fculture)
-df$fculture <- as.factor(df$fculture)
-plot(df$fculture, las = 2)
+#length(culturerank)
+print(culturerank)
+df20$culture[!df20$culture %in% culturerank] <- "Other"
+df20$culture <- as.factor(df20$culture)
+df20 %>% select(title,culture)
+#plot(df20$culture, las = 2)
+#print(levels(df20$culture))
+#head(df20)
+# length(df)
+```
 
+
+```{r}
 # smaller stroke, 10 categories
 df$ffculture <- df$culture
 culturerank <- names(which(table(df$culture) > 500))
@@ -76,7 +100,7 @@ df$ffculture <- as.factor(df$ffculture)
 plot(df$ffculture, las = 2)
 ```
 
-EDA: department, division, century, period
+# EDA: Department, Division, Century, Period
 ```{r}
 head(df$department)
 unique(df$department)
@@ -98,7 +122,7 @@ hist(df$accessionyear)
 #plot()
 ```
 
-EDA: datethings
+# EDA: Datethings
 
 ```{r}
 hist(df$dateend, breaks = 300)
@@ -127,7 +151,10 @@ hist(df_validdates$meddate, breaks = 300)
 # plot(lm1)
 ```
 
-Data Analysis
+## Data Analysis
+
+Recommend do geom_violin:
+ex: tweet_data %>% ggplot(aes(x = about_china, y = sentiment)) + geom_violin(trim = FALSE, aes(fill = about_china), alpha = 0.8) + xlab("Tweet Type") + ylab("Sentiment") + scale_fill_discrete(name = "Tweet Type", labels = ch_cats) + scale_x_discrete(labels=ch_cats) + ggtitle("China-Related Tweet Sentiment Distribution") + theme_minimal() + ggsave("violin_ch.png", width = 5, height = 5)
 ```{r}
 df_validdates$logdate <- log(max(df_validdates$meddate) - df_validdates$meddate + 1)
 hist(df_validdates$logdate)
@@ -191,5 +218,19 @@ substr(a, 1, 2)
 head(df$dated)
 unique(df$dated)
 sum(df$dated == "Unknown")
+```
+
+
+## Plots/Visualizations
+```{r}
+
+# example
+# https://github.com/HarvardOpenData/HODP-StyleGuide/blob/master/ggplot_example.R
+
+# Add logo
+#grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(2, 'cm'))
+
+# Interactive Graphic
+#ggplotly(a)
 ```
 
