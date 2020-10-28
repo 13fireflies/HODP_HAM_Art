@@ -144,6 +144,46 @@ boxplot(views ~ ffculture, data = df)
 #boxplot(logviews ~ ffculture, data - df)
 ```
 
+# final analyses
+```{r}
+boxplot(views ~ ffculture, data = df)
+hist(df$logviews)
+boxplot(logviews ~ ffculture, data = df)
+summary(aov(logviews~ ffculture, data = df))
+tapply(df$views, df$ffculture, var)
+
+hist(df$accessionyear)
+plot(views ~ accessionyear, data = df)
+
+lo1 <- loess(views ~ accessionyear, data = df, span = 1)
+sampyear <- 1700:2020
+yhat <- predict(lo1, newdata = data.frame(accessionyear = sampyear))
+plot(views ~ accessionyear, data = df)
+lines(yhat ~ sampyear, col = "red", lwd = 2)
+
+lo2 <- loess(views ~ accessionyear, data = df[-which.min(df$accessionyear),], span = 1)
+sampyear <- 1850:2020
+yhat <- predict(lo2, newdata = data.frame(accessionyear = sampyear))
+plot(views ~ accessionyear, data = df[-which.min(df$accessionyear),])
+lines(yhat ~ sampyear, col = "red", lwd = 2)
+
+
+
+lo2 <- loess(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),], span = 1)
+sampyear <- 1850:2020
+yhat <- predict(lo2, newdata = data.frame(accessionyear = sampyear))
+plot(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),])
+lines(yhat ~ sampyear, col = "red", lwd = 2)
+```
+
+```{r}
+poislm <- glm(views ~ accessionyear, data = df[-which.min(df$accessionyear),], family = "poisson")
+summary(poislm)
+
+lm123 <- lm(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),])
+summary(lm123)
+```
+
 
 ```{r}
 plot(rank ~ logdate, data = df_validdates)
