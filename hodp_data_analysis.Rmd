@@ -14,6 +14,7 @@ source('styleguide.R')
 ```{r}
 df <- read.csv("./MuseumDataFull1015.csv")
 summary(df)
+theme_set(theme_hodp())
 ```
 
 ## EDA of totaluniquepageviews
@@ -171,6 +172,7 @@ boxplot(views ~ ffculture, data = df)
 #boxplot(logviews ~ ffculture, data - df)
 ```
 
+
 # final analyses
 ```{r}
 boxplot(views ~ ffculture, data = df)
@@ -274,7 +276,6 @@ sum(df$dated == "Unknown")
 #ggplotly(a)
 ```
 
-
 ## Accession Year
 
 ```{r}
@@ -365,3 +366,73 @@ ggplotly(circles,tooltip = c("avgViews")) %>% layout(title = list(text = paste0(
 write.csv(df, 'cleanedData.csv')
 ```
 
+
+```{r}
+library(ggplot2)
+df <- as.data.frame(df)
+
+#barplot of all the cultures
+df$ffculture <- reorder(df$ffculture, df$ffculture, FUN = length)
+ggplot(data =df, aes(x = ffculture)) + geom_bar() + 
+  labs(y = "Occurrences Per Culture", x = "Cultures", title = "Barplot of Cultures")
+
+#accessionyear vs views
+ggplot(data = df[-which.min(df$accessionyear),], aes(x = accessionyear, y = views)) + geom_point()
+
+#culture vs views
+# bar plot
+cultureviews <- aggregate(df$views, by = list(df$ffculture), FUN = mean)
+colnames(cultureviews) <- c("Culture", "Views")
+cultureviews <- cultureviews[order(cultureviews$Views),]
+cultureviews$Culture <- factor(cultureviews$Culture, levels = cultureviews$Culture)
+ggplot(data = cultureviews, aes(x= Culture, y = Views)) + geom_bar(stat = "identity") + 
+  labs(y = "Average Views Per Culture", title = "Boxplot of Average Views Per Culture")
+
+#dot plot
+ggplot(cultureviews, aes(x=Culture, y=Views)) + 
+  geom_point(col = '#EE3838', size=3) +   # Draw points
+  geom_segment(aes(x=Culture, 
+                   xend=Culture, 
+                   y=min(Views), 
+                   yend=max(Views)), 
+               linetype="dashed", 
+               size=0.1) +   # Draw dashed lines
+  labs(title="Dot Plot of Average Vies Per Culture", 
+       subtitle="", 
+       caption="") +  
+  coord_flip()
+
+#boxplots
+ggplot(df, aes(x=ffculture, y=views)) +
+  geom_boxplot()
+df$ffculture <- factor(df$ffculture, 
+    levels = c("Japanese", "Other", "Italian", "British",  "Greek", "French", "German", "Roman","American", "Unknown"))
+ggplot(df, aes(x=ffculture, y=logviews)) +
+  geom_boxplot()
+ggplot(df, aes(x=ffculture, y=logviews)) +
+  geom_violin()
+
+#culture vs ranks: boxplots
+cultureranks <- aggregate(df$rank, by = list(df$ffculture), FUN = mean)
+colnames(cultureranks) <- c("Culture", "Ranks")
+cultureranks <- cultureranks[order(cultureranks$Ranks),]
+cultureranks$Culture <- factor(cultureranks$Culture, levels = cultureranks$Culture)
+ggplot(data = cultureranks, aes(x= Culture, y = Ranks)) + geom_bar(stat = "identity") + 
+  labs(y = "Average Ranks Per Culture", title = "Boxplot of Average Ranks Per Culture")
+
+
+# culture and rank boxplots
+df$ffculture <- factor(df$ffculture, 
+    levels = c("Japanese", "Greek", "Roman", "Other", "American", "German", "Unknown", "British", "Italian", "French"))
+ggplot(df, aes(x=ffculture, y=rank)) +
+  geom_boxplot() + scale_y_reverse() + labs(y = "Rank", x = "Culture",
+  title = "Boxplots of Culture Ranks")
+
+df$ffculture <- factor(df$ffculture, 
+    levels = c("Japanese", "Other", "Italian", "British",  "Greek", "French", "German", "Roman","American", "Unknown"))
+ggplot(df, aes(x=ffculture, y=rank)) +
+  geom_violin() + labs(y = "Rank", x = "Culture",
+  title = "Boxplots of Culture Ranks")
+
+
+```
