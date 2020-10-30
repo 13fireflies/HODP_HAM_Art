@@ -11,6 +11,7 @@ logo <- image_read("logo.png")
 monochrome <- c('#760000', '#BE1E26', '#D84742', '#FF6B61', '#FF9586')
 primary <- c('#EE3838', '#FA9E1C', '#78C4D4', '#4B5973', '#E2DDDB')
 sidebysidebarplot <- c("#ef3e3e", "#2c3e50")
+# Our Windows doesn't have Helvetica, use Franklin Gothic instead
 theme_hodp <- function () { 
   theme_classic(base_size=12, base_family="Helvetica") %+replace%
     theme(
@@ -18,14 +19,30 @@ theme_hodp <- function () {
       plot.background = element_rect(fill="#F2F2F2", colour="#d3d3d3"),
       legend.background = element_rect(fill="transparent", colour=NA),
       legend.key = element_rect(fill="transparent", colour=NA),
-      plot.title = element_text(size=24,  family="Helvetica", face = "bold", margin = margin(t = 0, r = 0, b = 10, l = 0)),
-      plot.subtitle = element_text(size=18,  family="Helvetica", color="#717171", face = "italic", margin = margin(t = 0, r = 0, b = 10, l = 0)),
-      plot.caption = element_text(size=8,  family="Helvetica", hjust = 1),
-      axis.text.x =element_text(size=10,  family="Helvetica"),
-      axis.title.x =element_text(size=14, family="Helvetica", margin = margin(t = 10, r = 0, b = 0, l = 0), face = "bold"),
-      axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0), size=14, family="Helvetica", angle=90, face ='bold'),
-      legend.title=element_text(size=10, family="Helvetica"), 
-      legend.text=element_text(size=10, family="Helvetica"),
+      plot.title = element_text(size=24,  family="Franklin Gothic", face = "bold", margin = margin(t = 0, r = 0, b = 10, l = 0)),
+      plot.subtitle = element_text(size=18,  family="Franklin Gothic Book", color="#717171", face = "italic", margin = margin(t = 0, r = 0, b = 10, l = 0)),
+      plot.caption = element_text(size=8,  family="Franklin Gothic Book", hjust = 1),
+      axis.text.x =element_text(size=8,  family="Franklin Gothic Book"),
+      axis.title.x =element_text(size=14, family="Franklin Gothic Book", margin = margin(t = 10, r = 0, b = 0, l = 0), face = "bold"),
+      axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0), size=14, family="Franklin Gothic Book", angle=90, face ='bold'),
+      legend.title=element_text(size=10, family="Franklin Gothic Book"), 
+      legend.text=element_text(size=10, family="Franklin Gothic Book"),
+      legend.position = "bottom",
+      axis.ticks = element_blank()
+    )
+}
+theme_hodp_void <- function () { 
+  theme_void(base_size=12, base_family="Helvetica") %+replace%
+    theme(
+      panel.background  = element_rect(fill="#F2F2F2", colour=NA),
+      plot.background = element_rect(fill="#F2F2F2", colour="#d3d3d3"),
+      legend.background = element_rect(fill="transparent", colour=NA),
+      legend.key = element_rect(fill="transparent", colour=NA),
+      plot.title = element_text(size=24,  family="Franklin Gothic Book", face = "bold", margin = margin(t = 0, r = 0, b = 10, l = 0)),
+      plot.subtitle = element_text(size=18,  family="Franklin Gothic Book", color="#717171", face = "italic", margin = margin(t = 0, r = 0, b = 10, l = 0)),
+      plot.caption = element_text(size=8,  family="Franklin Gothic Book", hjust = 1),
+      legend.title=element_text(size=10, family="Franklin Gothic Book"), 
+      legend.text=element_text(size=10, family="Franklin Gothic Book"),
       legend.position = "bottom",
       axis.ticks = element_blank()
     )

@@ -6,18 +6,18 @@ output: pdf_document
 ---
 
 ```{r}
-source('styleguide.R')
+source('./styleguide.R')
 ```
 
 
-# Check Dataset as a Whole
+### Check Dataset as a Whole
 ```{r}
 df <- read.csv("./MuseumDataFull1015.csv")
 summary(df)
 theme_set(theme_hodp())
 ```
 
-## EDA of totaluniquepageviews
+### EDA of totaluniquepageviews
 
 Extremely right skewed
 ```{r}
@@ -35,7 +35,7 @@ quantile(df$views, c(0:20)/20)
 sum(df$views > 100) #400
 ```
 
-## EDA of Culture
+### EDA of Culture
 Some weird stuff, like with "European?"
 multiple categories of Italian, Roman, Spanish, British; there is Flemish and Franco-Flemish and French
 Unidentified culture and unknown are also two categories
@@ -44,7 +44,7 @@ Unidentified culture and unknown are also two categories
 "Hellenistic"                  
 "Hellenistic or Early Roman" 
 
-### Add general culture labels
+#### Add general culture labels
 ```{r}
 # broader stroke, 21 categories
 head(df$culture)
@@ -82,11 +82,7 @@ df$fculture[!df$culture %in% culturerank] <- "Other"
 table(df$fculture)
 df$fculture <- as.factor(df$fculture)
 plot(df$fculture, las = 2)
-head(df)
-#df %>% select(title,fculture)
 
-
-# length(df)
 ```
 
 
@@ -101,7 +97,13 @@ df$ffculture <- as.factor(df$ffculture)
 plot(df$ffculture, las = 2)
 ```
 
-# EDA: Department, Division, Century, Period
+#### Export the clean data
+```{r}
+
+write.csv(df, 'cleanedData.csv')
+```
+
+#### EDA: Department, Division, Century, Period
 ```{r}
 head(df$department)
 unique(df$department)
@@ -120,10 +122,10 @@ length(unique(df$century))
 head(df$dateend)
 hist(df$rank)
 hist(df$accessionyear)
-#plot()
+
 ```
 
-# EDA: Datethings
+#### EDA: Datethings
 
 ```{r}
 hist(df$dateend, breaks = 300)
@@ -152,10 +154,9 @@ hist(df_validdates$meddate, breaks = 300)
 # plot(lm1)
 ```
 
-## Data Analysis
+### Data Analysis
 
-Recommend do geom_violin:
-ex: tweet_data %>% ggplot(aes(x = about_china, y = sentiment)) + geom_violin(trim = FALSE, aes(fill = about_china), alpha = 0.8) + xlab("Tweet Type") + ylab("Sentiment") + scale_fill_discrete(name = "Tweet Type", labels = ch_cats) + scale_x_discrete(labels=ch_cats) + ggtitle("China-Related Tweet Sentiment Distribution") + theme_minimal() + ggsave("violin_ch.png", width = 5, height = 5)
+
 ```{r}
 df_validdates$logdate <- log(max(df_validdates$meddate) - df_validdates$meddate + 1)
 hist(df_validdates$logdate)
@@ -173,7 +174,7 @@ boxplot(views ~ ffculture, data = df)
 ```
 
 
-# final analyses
+#### Final Analyses
 ```{r}
 boxplot(views ~ ffculture, data = df)
 hist(df$logviews)
@@ -222,13 +223,13 @@ summary(lm3)
 plot(lm3, which = c(1, 2))
 ```
 
-EDA: Intersections
+### EDA: Intersections
 ```{r}
 plot(df$views ~ df$division, las = 2)
 ```
 
 
-oh god, the dated stuff will be very annoying to clean
+
 ```{r, eval = F}
 library(stringr)
 head(df$dated)
@@ -263,43 +264,32 @@ sum(df$dated == "Unknown")
 ```
 
 
-## Plots/Visualizations
-```{r}
+### Visualizations
 
-# example
-# https://github.com/HarvardOpenData/HODP-StyleGuide/blob/master/ggplot_example.R
 
-# Add logo
-#grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(2, 'cm'))
-
-# Interactive Graphic
-#ggplotly(a)
-```
-
-## Accession Year
+#### Accession Year
 
 ```{r}
-df  %>% mutate(Culture=fculture) %>% ggplot(aes(x=accessionyear, y = views)) + geom_point(aes(color = Culture)) + ggtitle("Views and Accession Year") + xlab("Accession Year") + ylab("Average Views") + xlim(1890, 2020) + theme_hodp() +
-#+scale_color_manual(name = "Tweet Type")
-  #scale_x_date(date_minor_breaks = "7 days")  +
-  #geom_smooth(aes(color = fculture), se = FALSE) +
-  ggsave("accYear_views.png", width = 7.5, height = 5)
+accYear_views = df  %>% mutate(Culture=fculture) %>% ggplot(aes(x=accessionyear, y = views)) + geom_point(aes(color = Culture)) + ggtitle("Views and Accession Year") + xlab("Accession Year") + ylab("Average Views") + xlim(1890, 2020) + ggsave("./graphs/accYear_views.png", width = 7.5, height = 5)
+#ggplot(data = df[-which.min(df$accessionyear),], aes(x = accessionyear, y = views)) + geom_point()
+accYear_views
+grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(2, 'cm'))
 ```
 
 
-## Cool stuff
 
-### Filtered to top 20 cultures
+#### Filtered to Top 20 Cultures
 
 ```{r}
-culturerank <- names(which(table(df$culture) > 50))
+# change to > 50 for top 20
+culturerank <- names(which(table(df$culture) > 500))
 print(culturerank)
-df20 = df %>% filter(fculture %in% culturerank) %>% filter(!(as.character(fculture) %in% c("Unknown")))
+df20 = df %>% filter(ffculture %in% culturerank) %>% filter(!(as.character(ffculture) %in% c("Unknown")))
 df20 %>% select(culture, title)
 ```
 
 
-### Prep data for visual, summary statistics
+#### Prep data for visual, summary statistics
 
 ```{r}
 dfCircle = df20 %>% group_by(culture) %>% summarize(n(), mean(views), median(views), sd(views), mean(rank), median(rank), sd(rank))
@@ -314,103 +304,158 @@ print(dfCircle)
 ```
 
 
-### Circle vis
+#### Circle vis for Mean Views, and Count
 
 ```{r}
-
+### Mean Views
 library(packcircles)
 
 circleData <- data.frame(culture=dfCircle$culture, avgViews=dfCircle$meanViews) 
- 
-# Generate the layout. sizetype can be area or radius, following your preference on what to be proportional to value.
 packing <- circleProgressiveLayout(circleData$avgViews, sizetype='area')
 circleData <- cbind(circleData, packing)
 dat.gg <- circleLayoutVertices(packing, npoints=50)
-# dat.gg <- cbind(dat.gg, as.data.frame(circleData$avgViews))
-# names(word_list)[4] = 'avgViews'
+dat.gg$avgViews <- rep(circleData$avgViews, each=51)
 print(dat.gg)
 circles = ggplot() + 
   
-  # Make the bubbles
-  geom_polygon(data = dat.gg, aes(x, y, group = id, fill="#E9141D"), colour = "black") +
+  geom_polygon(data = dat.gg, aes(x, y, group = id, fill=avgViews, color="D84742")) +
+  scale_fill_continuous(high='#D84742', low='#FF9586') +
   
-  # Add text in the center of each bubble + control its size
-  geom_text(data = circleData, aes(x, y, size=avgViews, label = paste(culture, round(avgViews, digits=2), sep="\nAvg Views: "))) +
+  geom_text(data = circleData, aes(x, y, size=avgViews, label = paste(culture, round(avgViews, digits=2), sep="\n"))) +
   scale_size_continuous(range = c(1,4)) +
-    scale_alpha_continuous(range = c(0.35, 0.9)) +
-   labs(caption = "Source: https://harvardartmuseums.org/collections/api") + 
-  ggtitle("Mean Views of HAM Works, by Culture") + 
+  labs(fill = "Mean Views", caption = "Source: harvardartmuseums.org/collections/api") + 
+  ggtitle("Mean Views of Harvard Art Museum, by Culture") + 
+  coord_equal() + theme_void() + guides(size=FALSE, colour=FALSE) +
+ ggsave("./graphs/culture_views_cloud10.png")
+
+circles
+#grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(2, 'cm'))
+
+
+# ggplotly(circles,tooltip = c("avgViews")) %>% layout(title = list(text = paste0('Mean Views of HAM Works, by Culture',
+#                                     '<br>',
+#                                     '<sup>',
+#                                     'Source: harvardartmuseums.org/collections/api',
+#                                     '</sup>')))
+
+### Counts
+
+countData <- data.frame(culture=dfCircle$culture, Count=dfCircle$count) 
+ 
+
+countPacking <- circleProgressiveLayout(countData$Count, sizetype='area')
+countData <- cbind(countData, countPacking)
+countDat.gg <- circleLayoutVertices(countPacking, npoints=50)
+countDat.gg$Count <- rep(countData$Count, each=51)
+
+countCircles = ggplot() + 
   
-  # General theme:
+  geom_polygon(data = countDat.gg, aes(x, y, group = id, fill=Count, color="D84742")) +
+  scale_fill_continuous(high='#D84742', low='#FF9586') +
+  
+  geom_text(data = countData, aes(x, y, size=Count*5, label = paste(culture, Count, sep="\n"))) +
+  scale_size_continuous(range = c(1,4)) +
+  labs(fill = "Object Count", caption = "Source: harvardartmuseums.org/collections/api") + 
+  ggtitle("Count of Harvard Art Museum Works, by Culture") + 
+   guides(size=FALSE, colour=FALSE) +
+   coord_equal()   + theme_void() +
+  # theme(
+  #   plot.title = element_text(size=16),
+  #   axis.line=element_blank(),axis.text.x=element_blank(),
+  #         axis.text.y=element_blank(),axis.ticks=element_blank(),
+  #         axis.title.x=element_blank(),
+  #         axis.title.y=element_blank(),
+  #         panel.border=element_blank(),panel.grid.major=element_blank(),
+  #         panel.grid.minor=element_blank())  
+  ggsave("./graphs/culture_count_cloud10.png", width=7, height=7)
 
-  theme(axis.ticks=element_blank()) +
-  theme_hodp() +
-  theme_void() +
-  theme(legend.position="none") +
-  ggsave("culture_views_cloud.png")
-  #coord_equal()
 
-grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(2, 'cm'))
+countCircles
+#grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(2, 'cm'))
 
 
-ggplotly(circles,tooltip = c("avgViews")) %>% layout(title = list(text = paste0('Mean Views of HAM Works, by Culture',
-                                    '<br>',
-                                    '<sup>',
-                                    'Source: https://harvardartmuseums.org/collections/api',
-                                    '</sup>')))
-  #ggsave("keyword_cloud.png", width = 9, height = 5)
+# ggplotly(countCircles,tooltip = c("Count")) %>% layout(title = list(text = paste0('Count of HAM Works, by Culture',
+#                                     '<br>',
+#                                     '<sup>',
+#                                     'Source: harvardartmuseums.org/collections/api',
+#                                     '</sup>')))
 ```
 
+### Exploratory Plots
 ```{r}
-# cleaned data
-write.csv(df, 'cleanedData.csv')
-```
-
-
-```{r}
-library(ggplot2)
 df <- as.data.frame(df)
 
-#barplot of all the cultures
+#Cultures & Count
 df$ffculture <- reorder(df$ffculture, df$ffculture, FUN = length)
-ggplot(data =df, aes(x = ffculture)) + geom_bar() + 
-  labs(y = "Occurrences Per Culture", x = "Cultures", title = "Barplot of Cultures")
 
-#accessionyear vs views
-ggplot(data = df[-which.min(df$accessionyear),], aes(x = accessionyear, y = views)) + geom_point()
+cultureBar = ggplot(data =df, aes(x = ffculture, fill=..count..)) + geom_bar() + 
+  labs(y = "Occurrences Per Culture", x = "Cultures", title = "Cultures of Harvard Art Museum Works") +
+  scale_y_continuous(breaks=seq(0,7000,1000)) +
+  scale_fill_continuous(high='#D84742', low='#FF9586') + theme(legend.position="none") +
+   theme(plot.title = element_text(size=16)) +
+  ggsave("./graphs/culture_count_bar_graph.png")
+cultureBar
+#grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(1, 'cm'))
+  
 
-#culture vs views
-# bar plot
+
+#Culture vs Views
 cultureviews <- aggregate(df$views, by = list(df$ffculture), FUN = mean)
 colnames(cultureviews) <- c("Culture", "Views")
 cultureviews <- cultureviews[order(cultureviews$Views),]
 cultureviews$Culture <- factor(cultureviews$Culture, levels = cultureviews$Culture)
-ggplot(data = cultureviews, aes(x= Culture, y = Views)) + geom_bar(stat = "identity") + 
-  labs(y = "Average Views Per Culture", title = "Boxplot of Average Views Per Culture")
+cultureViews = ggplot(data = cultureviews, aes(x= Culture, y = Views, fill=Views)) + geom_bar(stat = "identity") + 
+  labs(y = "Average Views Per Culture", title = "Average Views Per Culture of HAM Works") +
+    scale_fill_continuous(high='#D84742', low='#FF9586') + theme(legend.position="none") +
+   theme(plot.title = element_text(size=16)) +
+   scale_y_continuous(breaks=seq(0,40,5)) +
+  ggsave("./graphs/culture_view_bar_graph.png")
+cultureViews
+#grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(1, 'cm'))
 
-#dot plot
-ggplot(cultureviews, aes(x=Culture, y=Views)) + 
-  geom_point(col = '#EE3838', size=3) +   # Draw points
+#Dot Plot
+dotPlot = ggplot(cultureviews, aes(x=Culture, y=Views)) + 
+  geom_point(col = '#ee3838', size=3, aes(color=Culture)) +   # Draw points, col = '#EE3838
+  #scale_color_manual(values=rep(primary,each=2)) +
   geom_segment(aes(x=Culture, 
                    xend=Culture, 
                    y=min(Views), 
                    yend=max(Views)), 
                linetype="dashed", 
                size=0.1) +   # Draw dashed lines
-  labs(title="Dot Plot of Average Vies Per Culture", 
+  labs(title="Average Views Per Culture of Harvard Art Museum Works", 
+       x = "Average Views",
        subtitle="", 
        caption="") +  
-  coord_flip()
+     theme(plot.title = element_text(size=14)) +
+  coord_flip() +
+ggsave("./graphs/culture_view_dot_graph.png")
+dotPlot
+#grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(1, 'cm'))
+```
 
-#boxplots
+
+#### Boxplots
+```{r}
+
 ggplot(df, aes(x=ffculture, y=views)) +
   geom_boxplot()
+
 df$ffculture <- factor(df$ffculture, 
     levels = c("Japanese", "Other", "Italian", "British",  "Greek", "French", "German", "Roman","American", "Unknown"))
-ggplot(df, aes(x=ffculture, y=logviews)) +
-  geom_boxplot()
-ggplot(df, aes(x=ffculture, y=logviews)) +
-  geom_violin()
+
+# VIEWS & VIOLIN PLOT
+viewsViol = ggplot(df, aes(x=ffculture, y=logviews)) +
+  geom_violin(aes(fill=ffculture), color=NA, alpha=0.8) + 
+  labs(y = "Log Views", x = "Cultures", title = "Cultures & Log Views of Harvard Art Museum Works") +
+  stat_summary(fun=median, geom="point", size=2, color="#4B5973") +
+  theme(plot.title = element_text(size=17)) +
+  theme(legend.position="none") +
+  ggsave("./graphs/culture_views_violin_graph.png")
+viewsViol
+#grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(1, 'cm'))
+  
+
 
 #culture vs ranks: boxplots
 cultureranks <- aggregate(df$rank, by = list(df$ffculture), FUN = mean)
@@ -428,11 +473,21 @@ ggplot(df, aes(x=ffculture, y=rank)) +
   geom_boxplot() + scale_y_reverse() + labs(y = "Rank", x = "Culture",
   title = "Boxplots of Culture Ranks")
 
+#  RANK & VIOLIN PLOT
+# right order is c("Japanese", "Other", "Italian", "British",  "Greek", "French", "German", "Roman","American", "Unknown")
 df$ffculture <- factor(df$ffculture, 
     levels = c("Japanese", "Other", "Italian", "British",  "Greek", "French", "German", "Roman","American", "Unknown"))
-ggplot(df, aes(x=ffculture, y=rank)) +
-  geom_violin() + labs(y = "Rank", x = "Culture",
-  title = "Boxplots of Culture Ranks")
+rankViol = ggplot(df, aes(x=ffculture, y=rank)) +
+  geom_violin(aes(fill=ffculture), color=NA, alpha=0.8) + labs(y = "Object Rank", x = "Culture",
+  title = "Culture & Object Ranks of Harvard Art Museum Works") +
+    stat_summary(fun=median, geom="point", size=2, color="#4B5973") +
+  theme(plot.title = element_text(size=16)) +
+  scale_fill_discrete(name = "Culture") +
+  theme(legend.position="none") +
+  ggsave("./graphs/culture_rank_violin_graph.png")
 
+rankViol
+
+#grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(1, 'cm'))
 
 ```
