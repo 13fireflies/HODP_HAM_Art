@@ -5,22 +5,27 @@ date: "10/14/2020"
 output: pdf_document
 ---
 
-We first upload the styleguide like usual.
+We first uploaded HODP's styleguide.
 ```{r}
 source('./styleguide.R')
-```
-
-
-### Check Dataset as a Whole
-We first load the data and then look at the summary in order to see if we need to transform any variables.
-```{r}
-df <- read.csv("./MuseumDataFull1015.csv")
-summary(df)
 theme_set(theme_hodp())
 ```
 
+## EDA, Data Analysis
+
+### Check the dataset as a whole
+
+We first load the data and then look at the summary in order to see if we need to transform any variables. In particular, sometimes, categorical variables are not properly organized. But it seems like at least for the variables of interest, besides culture, everything else seems to be of the right type.
+
+```{r}
+df <- read.csv("./MuseumDataFull1015.csv")
+summary(df)
+```
+
 ### EDA of Views
+
 We first do some EDA for uniquepageviews, in order to better understand the distribution of views. Note that it is extremely right skewed.
+
 ```{r}
 names(df)[names(df) == "totaluniquepageviews"] <- "views"
 hist(df$views, breaks = 500)
@@ -38,18 +43,26 @@ sum(df$views > 100) #400 of them have more than 100 views
 df$logviews <- log(df$views + 1)
 ```
 
-### EDA of Culture
-There are some weird occurrences, like with "European?". For the sake of simplicity, I would remove all of the question marks at the end.
-There were also multiple categories of Italian, Roman, Spanish, British.
-There are a few culture groups like Flemish, Franco-Flemish, and French, as well as "Graeco-Bactrian", "Graeco-Roman", and "Greek". For these, where some categories that intersect different cultures.
-Unidentified culture and unknown are also two categories; both categories were merged together, alongside pieces that have their culture category as blank.
+### EDA + Filtering of Culture
 
-#### Filtering some cultures
+First thing to note is that there are way too many cultures (162) to be able to conduct a reasonable analysis. Therefore, we should try to filter out many of the cultures in order to look for better patterns.
+
+
+Some cultures were also unusual; some of the cultures had a question mark at the end, perhaps because HAM, when identifying the piece, was also unsure themselves. For the sake of simplicity, we merged the uncertain with the certain groups.
+
+
+There were also multiple categories of Italian, Roman, Spanish, British, and for good reason. For example, there were multiple different Roman time periods for the different Roman ages. But again, as it falls under the more general guide of Roman, we decided to merge these groups as well.
+
+There are a few culture labels like Franco-Flemish, Graeco-Bactrian, and Graeco-Roman, where these categories intersect different cultures. For these, we ignored them, as it is uncertain which group we should put them under.
+
+Unidentified culture and unknown are also two categories; both categories were merged together, alongside pieces that have their culture category as blank. Therefore, many pieces in the final "Unknown" category were probably also not categorized or perhaps even documented at all, and that is something to take note of. After this, 133 cultures still remain, which are too many to reliably understand.
+
+
 ```{r}
-# broader stroke, 21 categories
+# EDA
 head(df$culture)
 allcnames <- unique(df$culture)
-length(allcnames)
+length(allcnames) #162 cultures
 orderedcnames <- allcnames[order(allcnames)]
 #orderedcnames
 # first remove the question marks
@@ -68,12 +81,15 @@ df$culture <- gsub("^$", "Unknown", df$culture)
 df$culture[df$culture == "^$" | df$culture == "Unidentified culture"] <- "Unknown"
 
 # looks at how many cultures remain
-length(unique(df$culture)) #133 remain
+length(unique(df$culture)) #133
 head(df %>% select(culture)) # looking at a few of these cultures
 ```
 
-#### Dataframes for top 20 or 10 cultures
-As there are too many cultures, we decided to filter the culture categories a bit more. We first filter out those that have over 50 occurrences, and then shift the rest into Other.
+### Filtering cultures even further
+
+As there are too many cultures, we decided to filter the culture categories a bit more. We first filter out those that have over 50 occurrences, and then shift the rest into an "Other" group. It just happened that including the "Other" group, we now have 20 total categories.
+But looking at the plot, there seemed to be two distinct groups of cultures; those who barely passed 50 occurrences, and those who had significantly more than 50 occurrences. Taking into note that the original sample was a random sample of pieces, it seemed better to continue to filter the cultures. Also, 20 cultures were still a lot of groups that seemed to distract from which cultures were mainly represented in HAM's collection.
+
 ```{r}
 # broader stroke, 20 categories
 df$fculture <- df$culture
@@ -85,7 +101,9 @@ df$fculture <- as.factor(df$fculture)
 plot(df$fculture, las = 2)
 ```
 
-We now filter it even more, down to cultures that have over 500 categories. Now only 10 categories remain.
+We now filter it even more, down to cultures that have over 500 occurrences, throwing the rest into the "Other" category. Now only 10 categories remain. While the increased size of the "Other" category may be a concern, again it seemed like the better choice due to the randomness of the sample and now we can clearly see which cultures were most represented.
+
+
 ```{r}
 # smaller stroke, 10 categories
 df$ffculture <- df$culture
@@ -97,187 +115,47 @@ df$ffculture <- as.factor(df$ffculture)
 plot(df$ffculture, las = 2)
 ```
 
-#### Export the clean data
+### Export the clean data
+
 ```{r}
 write.csv(df, 'cleanedData.csv')
 ```
 
+### Views vs FFculture Analysis
+
+This part is used in the article. We usually assume in the ANOVA test, that we want normality and constant variance. This is why we need to use the transformed logviews instead of the original views. We can see this by comparing the side-by-side boxplots for views versus logviews. From looking at the variances for the transformed variances, we see that it is the difference between the largest and the smallest variance is about a factor of 2. The normality assumption does not seem to be satisfied, as the overall log-views is still right-skewed. But given the large sample size, the violation of the Normality assumption is not a large concern. The main issue also comes with interpretation: given that there is a statistically significant difference in mean logviews, we want to interpret this result in terms of only views-- even though the median is somewhat different, especially for the Italian group, it is better to interpret this result as the fact that the median views are different, as the medians more invariant to a log-transformation than means.
 
 
-#### EDA: Department, Division, Century, Period
-This part can be skipped, as it was not used in the final article.
+There was also the possibility to use a nonparametric (Kruskal Wallis) approach, but it not only assumes that the shape of each group's distributions are the same, which seems quite unlikely due to how some groups have far more positive outliers than others, there is also the concern of interpreting stochastic dominance. Therefore, this was not used for the final discussion. Nevertheless, from the results below, we can still see that there is a statistically significant result.
+
 ```{r}
-#head(df$department)
-#unique(df$department)
-df$department <- as.factor(df$department)
-#head(df$division)
-#length(unique(df$division))
-#unique(df$division)
-df$division[df$division == ""] <- "Other"
-df$division <- as.factor(df$division)
-#plot(df$division, las = 2)
-#head(df$period)
-#length(unique(df$period))
-#head(df$century)
-#length(unique(df$century))
-#unique(df$century)
-#head(df$dateend)
-#hist(df$rank)
-#hist(df$accessionyear)
-```
-
-#### EDA: Datethings
-This part can be skipped, as it was not used in the final article.
-```{r}
-#hist(df$dateend, breaks = 300)
-#sum(df$dateend == 0)
-#sum(df$datebegin == 0 & df$dateend == 0)
-#head(df$century[df$datebegin == 0 & df$dateend == 0])
-#making rank something reasonable
-#hist(df$rank, breaks = 300)
-#summary(df$rank)
-#plot(rank ~ views, data = df)
-
-#arank was an attempt to make the ranks more normally distributed
-df$arank <- df$rank
-df$arank <- df$arank - min(df$arank) + 1
-df$arank <- df$arank / (max(df$arank) + 1)
-df$arank <- log(df$arank / (1 - df$arank))
-
-
-df_validdates <- df[df$datebegin != 0 | df$dateend != 0,]
-df_validdates$meddate <- (df_validdates$datebegin + df_validdates$dateend) / 2
-#hist(df_validdates$meddate, breaks = 300)
-```
-
-### Data Analysis: logdate vs logviews
-This part can be skipped, as it was not used in the final article. 
-```{r}
-df_validdates$logdate <- log(max(df_validdates$meddate) - df_validdates$meddate + 1)
-#hist(df_validdates$logdate)
-#hist(df_validdates$logviews)
-#summary(df_validdates$logviews)
-
-#lm2 <- lm(logviews ~ logdate, data = df_validdates)
-#summary(lm2)
-#plot(logviews ~ logdate, data = df_validdates)
-#abline(lm2, col = "Blue")
-#plot(lm2, which = c(1, 2)) #assumptions really not met
-```
-
-## Views vs FFculture analysis
-This part is used in the article. We usually assume in the ANOVA test, that we want normality and constant variance. This is why we need to use the transformed logviews instead of the original views. We can see this by comparing the side-by-side boxplots for views versus logviews. From looking at the variances for the transformed variances, we see that it is the difference between the largest and the smallest variance is about a factor of 2. The normality assumption does not seem to be satisfied, as the overall log-views is still right-skewed. But given the large sample size, it works.
-```{r}
+# Why does just using views not work?
 boxplot(views ~ ffculture, data = df)
 tapply(df$views, df$ffculture, var)
+# Looking at log-views
 hist(df$logviews)
-boxplot(logviews ~ ffculture, data = df)
 summary(aov(logviews~ ffculture, data = df))
+# Assumption-checking
+boxplot(logviews ~ ffculture, data = df)
 tapply(df$logviews, df$ffculture, var)
-```
 
-### Data Analysis: accessionyear vs views
-This part is not used in the article. So this can be skipped.
-```{r}
-#hist(df$accessionyear)
-#plot(views ~ accessionyear, data = df)
+#Mean vs Median
+tapply(df$logviews, df$ffculture, mean)
+tapply(df$logviews, df$ffculture, median)
 
-#lo1 <- loess(views ~ accessionyear, data = df, span = 1)
-#sampyear <- 1700:2020
-#yhat <- predict(lo1, newdata = data.frame(accessionyear = sampyear))
-#plot(views ~ accessionyear, data = df)
-#lines(yhat ~ sampyear, col = "red", lwd = 2)
-
-#loess models as assumptions are not met
-#lo2 <- loess(views ~ accessionyear, data = df[-which.min(df$accessionyear),], span = 1)
-#sampyear <- 1850:2020
-#yhat <- predict(lo2, newdata = data.frame(accessionyear = sampyear))
-#plot(views ~ accessionyear, data = df[-which.min(df$accessionyear),])
-#lines(yhat ~ sampyear, col = "red", lwd = 2)
-
-#lo2 <- loess(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),], span = 1)
-#sampyear <- 1850:2020
-#yhat <- predict(lo2, newdata = data.frame(accessionyear = sampyear))
-#plot(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),])
-#lines(yhat ~ sampyear, col = "red", lwd = 2)
-
-# using a poisson regression as well as a normal linear regression
-#poislm <- glm(views ~ accessionyear, data = df[-which.min(df$accessionyear),], family = "poisson")
-#summary(poislm)
-
-#lm123 <- lm(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),])
-#summary(lm123)
+# Kurskal-Wallis
+kruskal.test(logviews ~ ffculture, data = df)
 ```
 
 
-### Data Analysis: rank vs logdate
-This part can also be skipped, as it was not used in the final article. 
-```{r}
-#plot(rank ~ logdate, data = df_validdates)
-# used arank instead of rank
-# arank was created before df_validdates; go to EDA: datethings to see how it was made
+## Pretty Visualizations
 
+This is the more useful section. Admittedly, even here, some visualizations were not used.
 
-#plot(arank ~ logdate, data = df_validdates) 
-#lm3 <- lm(arank ~ logdate, data = df_validdates)
-#summary(lm3)
-#plot(lm3, which = c(1, 2))
-```
+### Filtered to Top 20 Cultures
 
+This helps to format the data properly to create the later visuals.
 
-This was an attempt to clean up the original dates, but this was not used as well so this can be skipped.
-```{r, eval = F}
-library(stringr)
-head(df$dated)
-
-# get rid of those unknown stuff
-uuu <- str_detect(df$dated, "^[Uu]")
-allunknown <- c(unique(df$dated[uuu]), "")
-sum(df$dated == "Unknown")
-df$dated[df$dated %in% allunknown] <- "Unknown"
-
-# lowkey lumping all the BCE together, as not too many of them
-bce <- str_detect(df$dated, "BCE")
-sum(df$dated[bce])
-df$dated[bce] <- "BCE"
-
-# then hopefully can lump by century GG
-# first work with the best case scenario LOL
-# thank u random guy: https://gist.github.com/micstr/69a64fbd0f5635094a53
-IsDate <- function(mydate, date.format = "%m/%d/%y") {
-  tryCatch(!is.na(as.Date(mydate, date.format)),  
-           error = function(err) {FALSE})  
-}
-
-nicedates <- IsDate(df$dated)
-sum(nicedates)
-a = c("10/2/2020", 13, "asd")
-a[1] <- as.Date(a[1])
-substr(a, 1, 2)
-head(df$dated)
-unique(df$dated)
-sum(df$dated == "Unknown")
-```
-
-
-## Visualizations
-This is the more useful overall section. Admittedly, even here, some visualizations were not used.
-
-
-#### Accession Year
-This part is not used in the article. So this can be skipped.
-```{r}
-#accYear_views = df  %>% mutate(Culture=fculture) %>% ggplot(aes(x=accessionyear, y = views)) + geom_point(aes(color = Culture)) + ggtitle("Views and Accession Year") + xlab("Accession Year") + ylab("Average Views") + xlim(1890, 2020) + ggsave("./graphs/accYear_views.png", width = 7.5, height = 5)
-#ggplot(data = df[-which.min(df$accessionyear),], aes(x = accessionyear, y = views)) + geom_point()
-#accYear_views
-grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(2, 'cm'))
-```
-
-
-
-#### Filtered to Top 20 Cultures
-
-This helps to create the later visuals.
 ```{r}
 # change to > 50 for top 20
 culturerank <- names(which(table(df$culture) > 500))
@@ -286,9 +164,10 @@ df20 = df %>% filter(ffculture %in% culturerank) %>% filter(!(as.character(ffcul
 df20 %>% select(culture, title)
 ```
 
+### Prep data for visual, summary statistics
 
-#### Prep data for visual, summary statistics
 More preparation for visuals.
+
 ```{r}
 dfCircle = df20 %>% group_by(culture) %>% summarize(n(), mean(views), median(views), sd(views), mean(rank), median(rank), sd(rank))
 names(dfCircle)[names(dfCircle) == "n()"] <- "count"
@@ -303,7 +182,9 @@ print(dfCircle)
 
 
 #### Circle vis for Mean Views, and Count
-This creates the circle plot in the article.
+
+This creates the circle plots for the article.
+
 ```{r}
 ### Mean Views
 library(packcircles)
@@ -380,7 +261,9 @@ countCircles
 ```
 
 ### Exploratory Plots
+
 More plots for the article, including two boxplots for mean views/ranks per culture.
+
 ```{r}
 df <- as.data.frame(df)
 
@@ -435,7 +318,9 @@ cultureViews
 
 
 #### Boxplots
+
 From this section, we only used the colorful violinplots, comparing against logviews and rank.
+
 ```{r}
 
 #ggplot(df, aes(x=ffculture, y=views)) +
@@ -491,4 +376,157 @@ rankViol
 
 #grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(1, 'cm'))
 
+```
+
+
+### Things Not Used in the Article:
+
+As these were not used in the article, there are sparse comments.
+
+#### EDA: Department, Division, Century, Period
+```{r}
+#head(df$department)
+#unique(df$department)
+df$department <- as.factor(df$department)
+#head(df$division)
+#length(unique(df$division))
+#unique(df$division)
+df$division[df$division == ""] <- "Other"
+df$division <- as.factor(df$division)
+#plot(df$division, las = 2)
+#head(df$period)
+#length(unique(df$period))
+#head(df$century)
+#length(unique(df$century))
+#unique(df$century)
+#head(df$dateend)
+#hist(df$rank)
+#hist(df$accessionyear)
+```
+
+#### EDA: Datethings
+```{r}
+#hist(df$dateend, breaks = 300)
+#sum(df$dateend == 0)
+#sum(df$datebegin == 0 & df$dateend == 0)
+#head(df$century[df$datebegin == 0 & df$dateend == 0])
+#making rank something reasonable
+#hist(df$rank, breaks = 300)
+#summary(df$rank)
+#plot(rank ~ views, data = df)
+
+#arank was an attempt to make the ranks more normally distributed
+df$arank <- df$rank
+df$arank <- df$arank - min(df$arank) + 1
+df$arank <- df$arank / (max(df$arank) + 1)
+df$arank <- log(df$arank / (1 - df$arank))
+
+
+df_validdates <- df[df$datebegin != 0 | df$dateend != 0,]
+df_validdates$meddate <- (df_validdates$datebegin + df_validdates$dateend) / 2
+#hist(df_validdates$meddate, breaks = 300)
+```
+
+#### Data Analysis: logdate vs logviews
+```{r}
+df_validdates$logdate <- log(max(df_validdates$meddate) - df_validdates$meddate + 1)
+#hist(df_validdates$logdate)
+#hist(df_validdates$logviews)
+#summary(df_validdates$logviews)
+
+#lm2 <- lm(logviews ~ logdate, data = df_validdates)
+#summary(lm2)
+#plot(logviews ~ logdate, data = df_validdates)
+#abline(lm2, col = "Blue")
+#plot(lm2, which = c(1, 2)) #assumptions really not met
+```
+
+#### Data Analysis: accessionyear vs views
+```{r}
+#hist(df$accessionyear)
+#plot(views ~ accessionyear, data = df)
+
+#lo1 <- loess(views ~ accessionyear, data = df, span = 1)
+#sampyear <- 1700:2020
+#yhat <- predict(lo1, newdata = data.frame(accessionyear = sampyear))
+#plot(views ~ accessionyear, data = df)
+#lines(yhat ~ sampyear, col = "red", lwd = 2)
+
+#loess models as assumptions are not met
+#lo2 <- loess(views ~ accessionyear, data = df[-which.min(df$accessionyear),], span = 1)
+#sampyear <- 1850:2020
+#yhat <- predict(lo2, newdata = data.frame(accessionyear = sampyear))
+#plot(views ~ accessionyear, data = df[-which.min(df$accessionyear),])
+#lines(yhat ~ sampyear, col = "red", lwd = 2)
+
+#lo2 <- loess(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),], span = 1)
+#sampyear <- 1850:2020
+#yhat <- predict(lo2, newdata = data.frame(accessionyear = sampyear))
+#plot(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),])
+#lines(yhat ~ sampyear, col = "red", lwd = 2)
+
+# using a poisson regression as well as a normal linear regression
+#poislm <- glm(views ~ accessionyear, data = df[-which.min(df$accessionyear),], family = "poisson")
+#summary(poislm)
+
+#lm123 <- lm(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),])
+#summary(lm123)
+```
+
+
+#### Data Analysis: rank vs logdate
+```{r}
+#plot(rank ~ logdate, data = df_validdates)
+# used arank instead of rank
+# arank was created before df_validdates; go to EDA: datethings to see how it was made
+
+
+#plot(arank ~ logdate, data = df_validdates) 
+#lm3 <- lm(arank ~ logdate, data = df_validdates)
+#summary(lm3)
+#plot(lm3, which = c(1, 2))
+```
+
+#### Date Clean Up?
+```{r, eval = F}
+library(stringr)
+head(df$dated)
+
+# get rid of those unknown stuff
+uuu <- str_detect(df$dated, "^[Uu]")
+allunknown <- c(unique(df$dated[uuu]), "")
+sum(df$dated == "Unknown")
+df$dated[df$dated %in% allunknown] <- "Unknown"
+
+# lowkey lumping all the BCE together, as not too many of them
+bce <- str_detect(df$dated, "BCE")
+sum(df$dated[bce])
+df$dated[bce] <- "BCE"
+
+# then hopefully can lump by century GG
+# first work with the best case scenario LOL
+# thank u random guy: https://gist.github.com/micstr/69a64fbd0f5635094a53
+IsDate <- function(mydate, date.format = "%m/%d/%y") {
+  tryCatch(!is.na(as.Date(mydate, date.format)),  
+           error = function(err) {FALSE})  
+}
+
+nicedates <- IsDate(df$dated)
+sum(nicedates)
+a = c("10/2/2020", 13, "asd")
+a[1] <- as.Date(a[1])
+substr(a, 1, 2)
+head(df$dated)
+unique(df$dated)
+sum(df$dated == "Unknown")
+```
+
+
+#### Accession Year Visual
+
+```{r}
+#accYear_views = df  %>% mutate(Culture=fculture) %>% ggplot(aes(x=accessionyear, y = views)) + geom_point(aes(color = Culture)) + ggtitle("Views and Accession Year") + xlab("Accession Year") + ylab("Average Views") + xlim(1890, 2020) + ggsave("./graphs/accYear_views.png", width = 7.5, height = 5)
+#ggplot(data = df[-which.min(df$accessionyear),], aes(x = accessionyear, y = views)) + geom_point()
+#accYear_views
+#grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(2, 'cm'))
 ```
