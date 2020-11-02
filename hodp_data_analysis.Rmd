@@ -5,21 +5,22 @@ date: "10/14/2020"
 output: pdf_document
 ---
 
+We first upload the styleguide like usual.
 ```{r}
 source('./styleguide.R')
 ```
 
 
 ### Check Dataset as a Whole
+We first load the data and then look at the summary in order to see if we need to transform any variables.
 ```{r}
 df <- read.csv("./MuseumDataFull1015.csv")
 summary(df)
 theme_set(theme_hodp())
 ```
 
-### EDA of totaluniquepageviews
-
-Extremely right skewed
+### EDA of Views
+We first do some EDA for uniquepageviews, in order to better understand the distribution of views. Note that it is extremely right skewed.
 ```{r}
 names(df)[names(df) == "totaluniquepageviews"] <- "views"
 hist(df$views, breaks = 500)
@@ -29,22 +30,21 @@ hist(df$views, breaks = 5000, xlim = c(0, 500), ylim = c(0, 100))
 hist(df$views, breaks = 5000, xlim = c(0, 200))
 
 max(df$views) #max = 3234
-df[which.max(df$views),]
+df[which.max(df$views),] #looking at the maximum value
 summary(df$views)
-quantile(df$views, c(0:20)/20)
-sum(df$views > 100) #400
+quantile(df$views, c(0:20)/20) #a lot of the points do not have over 100 views
+sum(df$views > 100) #400 of them have more than 100 views
+#making logviews something reasonable
+df$logviews <- log(df$views + 1)
 ```
 
 ### EDA of Culture
-Some weird stuff, like with "European?"
-multiple categories of Italian, Roman, Spanish, British; there is Flemish and Franco-Flemish and French
-Unidentified culture and unknown are also two categories
-"Graeco-Bactrian"              
-"Graeco-Roman" + "Greek"
-"Hellenistic"                  
-"Hellenistic or Early Roman" 
+There are some weird occurrences, like with "European?". For the sake of simplicity, I would remove all of the question marks at the end.
+There were also multiple categories of Italian, Roman, Spanish, British.
+There are a few culture groups like Flemish, Franco-Flemish, and French, as well as "Graeco-Bactrian", "Graeco-Roman", and "Greek". For these, where some categories that intersect different cultures.
+Unidentified culture and unknown are also two categories; both categories were merged together, alongside pieces that have their culture category as blank.
 
-#### Add general culture labels
+#### Filtering some cultures
 ```{r}
 # broader stroke, 21 categories
 head(df$culture)
@@ -52,7 +52,7 @@ allcnames <- unique(df$culture)
 length(allcnames)
 orderedcnames <- allcnames[order(allcnames)]
 #orderedcnames
-# first remove the question marks, kinda pointless here
+# first remove the question marks
 df$culture <- gsub("[?]", "", df$culture)
 
 # Make consistent different locations using regex
@@ -64,28 +64,28 @@ df$culture <- gsub("^German\\?", "German", df$culture)
 df$culture <- gsub("^European.+", "European", df$culture)
 df$culture <- gsub("^$", "Unknown", df$culture)
 
+# merging together the different unknown cultures
 df$culture[df$culture == "^$" | df$culture == "Unidentified culture"] <- "Unknown"
 
-length(unique(df$culture))
-df %>% select(culture)
+# looks at how many cultures remain
+length(unique(df$culture)) #133 remain
+head(df %>% select(culture)) # looking at a few of these cultures
 ```
 
 #### Dataframes for top 20 or 10 cultures
-
-
+As there are too many cultures, we decided to filter the culture categories a bit more. We first filter out those that have over 50 occurrences, and then shift the rest into Other.
 ```{r}
 # broader stroke, 20 categories
 df$fculture <- df$culture
 culturerank <- names(which(table(df$culture) > 50))
-length(culturerank)
-df$fculture[!df$culture %in% culturerank] <- "Other"
-table(df$fculture)
+length(culturerank) # now only 19 named categories remain
+df$fculture[!df$culture %in% culturerank] <- "Other" #the rest of the cultures are marked as other
+table(df$fculture) #looks at the table of cultures
 df$fculture <- as.factor(df$fculture)
 plot(df$fculture, las = 2)
-
 ```
 
-
+We now filter it even more, down to cultures that have over 500 categories. Now only 10 categories remain.
 ```{r}
 # smaller stroke, 10 categories
 df$ffculture <- df$culture
@@ -99,137 +99,133 @@ plot(df$ffculture, las = 2)
 
 #### Export the clean data
 ```{r}
-
 write.csv(df, 'cleanedData.csv')
 ```
 
+
+
 #### EDA: Department, Division, Century, Period
+This part can be skipped, as it was not used in the final article.
 ```{r}
-head(df$department)
-unique(df$department)
+#head(df$department)
+#unique(df$department)
 df$department <- as.factor(df$department)
-head(df$division)
-length(unique(df$division))
-unique(df$division)
+#head(df$division)
+#length(unique(df$division))
+#unique(df$division)
 df$division[df$division == ""] <- "Other"
 df$division <- as.factor(df$division)
-plot(df$division, las = 2)
-head(df$period)
-length(unique(df$period))
-head(df$century)
-length(unique(df$century))
+#plot(df$division, las = 2)
+#head(df$period)
+#length(unique(df$period))
+#head(df$century)
+#length(unique(df$century))
 #unique(df$century)
-head(df$dateend)
-hist(df$rank)
-hist(df$accessionyear)
-
+#head(df$dateend)
+#hist(df$rank)
+#hist(df$accessionyear)
 ```
 
 #### EDA: Datethings
-
+This part can be skipped, as it was not used in the final article.
 ```{r}
-hist(df$dateend, breaks = 300)
-sum(df$dateend == 0)
-sum(df$datebegin == 0 & df$dateend == 0)
-head(df$century[df$datebegin == 0 & df$dateend == 0])
+#hist(df$dateend, breaks = 300)
+#sum(df$dateend == 0)
+#sum(df$datebegin == 0 & df$dateend == 0)
+#head(df$century[df$datebegin == 0 & df$dateend == 0])
 #making rank something reasonable
-hist(df$rank, breaks = 300)
-summary(df$rank)
-plot(rank ~ views, data = df)
+#hist(df$rank, breaks = 300)
+#summary(df$rank)
+#plot(rank ~ views, data = df)
+
+#arank was an attempt to make the ranks more normally distributed
 df$arank <- df$rank
 df$arank <- df$arank - min(df$arank) + 1
 df$arank <- df$arank / (max(df$arank) + 1)
 df$arank <- log(df$arank / (1 - df$arank))
 
 
-#making logviews something reasonable
-df$logviews <- log(df$views + 1)
-
 df_validdates <- df[df$datebegin != 0 | df$dateend != 0,]
 df_validdates$meddate <- (df_validdates$datebegin + df_validdates$dateend) / 2
-hist(df_validdates$meddate, breaks = 300)
-#df_validdates$meddate
-# lm1 <- lm(views ~ meddate, data = df_validdates)
-# summary(lm1)
-# plot(lm1)
+#hist(df_validdates$meddate, breaks = 300)
 ```
 
-### Data Analysis
-
-
+### Data Analysis: logdate vs logviews
+This part can be skipped, as it was not used in the final article. 
 ```{r}
 df_validdates$logdate <- log(max(df_validdates$meddate) - df_validdates$meddate + 1)
-hist(df_validdates$logdate)
-hist(df_validdates$logviews)
-summary(df_validdates$logviews)
+#hist(df_validdates$logdate)
+#hist(df_validdates$logviews)
+#summary(df_validdates$logviews)
 
-lm2 <- lm(logviews ~ logdate, data = df_validdates)
-summary(lm2)
-plot(logviews ~ logdate, data = df_validdates)
-abline(lm2, col = "Blue")
-plot(lm2, which = c(1, 2)) #assumptions really not met
-
-boxplot(views ~ ffculture, data = df)
-#boxplot(logviews ~ ffculture, data - df)
+#lm2 <- lm(logviews ~ logdate, data = df_validdates)
+#summary(lm2)
+#plot(logviews ~ logdate, data = df_validdates)
+#abline(lm2, col = "Blue")
+#plot(lm2, which = c(1, 2)) #assumptions really not met
 ```
 
-
-#### Final Analyses
+## Views vs FFculture analysis
+This part is used in the article. We usually assume in the ANOVA test, that we want normality and constant variance. This is why we need to use the transformed logviews instead of the original views. We can see this by comparing the side-by-side boxplots for views versus logviews. From looking at the variances for the transformed variances, we see that it is the difference between the largest and the smallest variance is about a factor of 2. The normality assumption does not seem to be satisfied, as the overall log-views is still right-skewed. But given the large sample size, it works.
 ```{r}
 boxplot(views ~ ffculture, data = df)
+tapply(df$views, df$ffculture, var)
 hist(df$logviews)
 boxplot(logviews ~ ffculture, data = df)
 summary(aov(logviews~ ffculture, data = df))
-tapply(df$views, df$ffculture, var)
-
-hist(df$accessionyear)
-plot(views ~ accessionyear, data = df)
-
-lo1 <- loess(views ~ accessionyear, data = df, span = 1)
-sampyear <- 1700:2020
-yhat <- predict(lo1, newdata = data.frame(accessionyear = sampyear))
-plot(views ~ accessionyear, data = df)
-lines(yhat ~ sampyear, col = "red", lwd = 2)
-
-lo2 <- loess(views ~ accessionyear, data = df[-which.min(df$accessionyear),], span = 1)
-sampyear <- 1850:2020
-yhat <- predict(lo2, newdata = data.frame(accessionyear = sampyear))
-plot(views ~ accessionyear, data = df[-which.min(df$accessionyear),])
-lines(yhat ~ sampyear, col = "red", lwd = 2)
-
-
-
-lo2 <- loess(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),], span = 1)
-sampyear <- 1850:2020
-yhat <- predict(lo2, newdata = data.frame(accessionyear = sampyear))
-plot(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),])
-lines(yhat ~ sampyear, col = "red", lwd = 2)
+tapply(df$logviews, df$ffculture, var)
 ```
 
+### Data Analysis: accessionyear vs views
+This part is not used in the article. So this can be skipped.
 ```{r}
-poislm <- glm(views ~ accessionyear, data = df[-which.min(df$accessionyear),], family = "poisson")
-summary(poislm)
+#hist(df$accessionyear)
+#plot(views ~ accessionyear, data = df)
 
-lm123 <- lm(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),])
-summary(lm123)
+#lo1 <- loess(views ~ accessionyear, data = df, span = 1)
+#sampyear <- 1700:2020
+#yhat <- predict(lo1, newdata = data.frame(accessionyear = sampyear))
+#plot(views ~ accessionyear, data = df)
+#lines(yhat ~ sampyear, col = "red", lwd = 2)
+
+#loess models as assumptions are not met
+#lo2 <- loess(views ~ accessionyear, data = df[-which.min(df$accessionyear),], span = 1)
+#sampyear <- 1850:2020
+#yhat <- predict(lo2, newdata = data.frame(accessionyear = sampyear))
+#plot(views ~ accessionyear, data = df[-which.min(df$accessionyear),])
+#lines(yhat ~ sampyear, col = "red", lwd = 2)
+
+#lo2 <- loess(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),], span = 1)
+#sampyear <- 1850:2020
+#yhat <- predict(lo2, newdata = data.frame(accessionyear = sampyear))
+#plot(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),])
+#lines(yhat ~ sampyear, col = "red", lwd = 2)
+
+# using a poisson regression as well as a normal linear regression
+#poislm <- glm(views ~ accessionyear, data = df[-which.min(df$accessionyear),], family = "poisson")
+#summary(poislm)
+
+#lm123 <- lm(logviews ~ accessionyear, data = df[-which.min(df$accessionyear),])
+#summary(lm123)
 ```
 
 
+### Data Analysis: rank vs logdate
+This part can also be skipped, as it was not used in the final article. 
 ```{r}
-plot(rank ~ logdate, data = df_validdates)
-plot(arank ~ logdate, data = df_validdates)
-lm3 <- lm(arank ~ logdate, data = df_validdates)
-summary(lm3)
-plot(lm3, which = c(1, 2))
+#plot(rank ~ logdate, data = df_validdates)
+# used arank instead of rank
+# arank was created before df_validdates; go to EDA: datethings to see how it was made
+
+
+#plot(arank ~ logdate, data = df_validdates) 
+#lm3 <- lm(arank ~ logdate, data = df_validdates)
+#summary(lm3)
+#plot(lm3, which = c(1, 2))
 ```
 
-### EDA: Intersections
-```{r}
-plot(df$views ~ df$division, las = 2)
-```
 
-
-
+This was an attempt to clean up the original dates, but this was not used as well so this can be skipped.
 ```{r, eval = F}
 library(stringr)
 head(df$dated)
@@ -264,15 +260,16 @@ sum(df$dated == "Unknown")
 ```
 
 
-### Visualizations
+## Visualizations
+This is the more useful overall section. Admittedly, even here, some visualizations were not used.
 
 
 #### Accession Year
-
+This part is not used in the article. So this can be skipped.
 ```{r}
-accYear_views = df  %>% mutate(Culture=fculture) %>% ggplot(aes(x=accessionyear, y = views)) + geom_point(aes(color = Culture)) + ggtitle("Views and Accession Year") + xlab("Accession Year") + ylab("Average Views") + xlim(1890, 2020) + ggsave("./graphs/accYear_views.png", width = 7.5, height = 5)
+#accYear_views = df  %>% mutate(Culture=fculture) %>% ggplot(aes(x=accessionyear, y = views)) + geom_point(aes(color = Culture)) + ggtitle("Views and Accession Year") + xlab("Accession Year") + ylab("Average Views") + xlim(1890, 2020) + ggsave("./graphs/accYear_views.png", width = 7.5, height = 5)
 #ggplot(data = df[-which.min(df$accessionyear),], aes(x = accessionyear, y = views)) + geom_point()
-accYear_views
+#accYear_views
 grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(2, 'cm'))
 ```
 
@@ -280,6 +277,7 @@ grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = 
 
 #### Filtered to Top 20 Cultures
 
+This helps to create the later visuals.
 ```{r}
 # change to > 50 for top 20
 culturerank <- names(which(table(df$culture) > 500))
@@ -290,7 +288,7 @@ df20 %>% select(culture, title)
 
 
 #### Prep data for visual, summary statistics
-
+More preparation for visuals.
 ```{r}
 dfCircle = df20 %>% group_by(culture) %>% summarize(n(), mean(views), median(views), sd(views), mean(rank), median(rank), sd(rank))
 names(dfCircle)[names(dfCircle) == "n()"] <- "count"
@@ -305,7 +303,7 @@ print(dfCircle)
 
 
 #### Circle vis for Mean Views, and Count
-
+This creates the circle plot in the article.
 ```{r}
 ### Mean Views
 library(packcircles)
@@ -315,7 +313,7 @@ packing <- circleProgressiveLayout(circleData$avgViews, sizetype='area')
 circleData <- cbind(circleData, packing)
 dat.gg <- circleLayoutVertices(packing, npoints=50)
 dat.gg$avgViews <- rep(circleData$avgViews, each=51)
-print(dat.gg)
+#print(dat.gg)
 circles = ggplot() + 
   
   geom_polygon(data = dat.gg, aes(x, y, group = id, fill=avgViews, color="D84742")) +
@@ -382,6 +380,7 @@ countCircles
 ```
 
 ### Exploratory Plots
+More plots for the article, including two boxplots for mean views/ranks per culture.
 ```{r}
 df <- as.data.frame(df)
 
@@ -414,33 +413,35 @@ cultureViews
 #grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(1, 'cm'))
 
 #Dot Plot
-dotPlot = ggplot(cultureviews, aes(x=Culture, y=Views)) + 
-  geom_point(col = '#ee3838', size=3, aes(color=Culture)) +   # Draw points, col = '#EE3838
+#dotPlot = ggplot(cultureviews, aes(x=Culture, y=Views)) + 
+#  geom_point(col = '#ee3838', size=3, aes(color=Culture)) +   # Draw points, col = '#EE3838
   #scale_color_manual(values=rep(primary,each=2)) +
-  geom_segment(aes(x=Culture, 
-                   xend=Culture, 
-                   y=min(Views), 
-                   yend=max(Views)), 
-               linetype="dashed", 
-               size=0.1) +   # Draw dashed lines
-  labs(title="Average Views Per Culture of Harvard Art Museum Works", 
-       x = "Average Views",
-       subtitle="", 
-       caption="") +  
-     theme(plot.title = element_text(size=14)) +
-  coord_flip() +
-ggsave("./graphs/culture_view_dot_graph.png")
-dotPlot
+#  geom_segment(aes(x=Culture, 
+#                   xend=Culture, 
+#                   y=min(Views), 
+#                   yend=max(Views)), 
+#               linetype="dashed", 
+#               size=0.1) +   # Draw dashed lines
+#  labs(title="Average Views Per Culture of Harvard Art Museum Works", 
+#       x = "Average Views",
+#       subtitle="", 
+#       caption="") +  
+#     theme(plot.title = element_text(size=14)) +
+#  coord_flip() +
+#ggsave("./graphs/culture_view_dot_graph.png")
+#dotPlot
 #grid::grid.raster(logo, x = 0.01, y = 0.01, just = c('left', 'bottom'), width = unit(1, 'cm'))
 ```
 
 
 #### Boxplots
+From this section, we only used the colorful violinplots, comparing against logviews and rank.
 ```{r}
 
-ggplot(df, aes(x=ffculture, y=views)) +
-  geom_boxplot()
+#ggplot(df, aes(x=ffculture, y=views)) +
+#  geom_boxplot()
 
+# relevelling for convenience
 df$ffculture <- factor(df$ffculture, 
     levels = c("Japanese", "Other", "Italian", "British",  "Greek", "French", "German", "Roman","American", "Unknown"))
 
@@ -462,16 +463,16 @@ cultureranks <- aggregate(df$rank, by = list(df$ffculture), FUN = mean)
 colnames(cultureranks) <- c("Culture", "Ranks")
 cultureranks <- cultureranks[order(cultureranks$Ranks),]
 cultureranks$Culture <- factor(cultureranks$Culture, levels = cultureranks$Culture)
-ggplot(data = cultureranks, aes(x= Culture, y = Ranks)) + geom_bar(stat = "identity") + 
-  labs(y = "Average Ranks Per Culture", title = "Boxplot of Average Ranks Per Culture")
+#ggplot(data = cultureranks, aes(x= Culture, y = Ranks)) + geom_bar(stat = "identity") + 
+#  labs(y = "Average Ranks Per Culture", title = "Boxplot of Average Ranks Per Culture")
 
 
 # culture and rank boxplots
-df$ffculture <- factor(df$ffculture, 
-    levels = c("Japanese", "Greek", "Roman", "Other", "American", "German", "Unknown", "British", "Italian", "French"))
-ggplot(df, aes(x=ffculture, y=rank)) +
-  geom_boxplot() + scale_y_reverse() + labs(y = "Rank", x = "Culture",
-  title = "Boxplots of Culture Ranks")
+#df$ffculture <- factor(df$ffculture, 
+#    levels = c("Japanese", "Greek", "Roman", "Other", "American", "German", "Unknown", "British", "Italian", "French"))
+#ggplot(df, aes(x=ffculture, y=rank)) +
+#  geom_boxplot() + scale_y_reverse() + labs(y = "Rank", x = "Culture",
+#  title = "Boxplots of Culture Ranks")
 
 #  RANK & VIOLIN PLOT
 # right order is c("Japanese", "Other", "Italian", "British",  "Greek", "French", "German", "Roman","American", "Unknown")
